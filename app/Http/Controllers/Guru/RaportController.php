@@ -9,6 +9,7 @@ use App\Models\AspekPerkembangan;
 use App\Models\Penilaian;
 use App\Models\DeskripsiAspek;
 use App\Models\Presensi;
+use App\Models\PresensiRaport;
 use App\Models\Antropometri;
 use App\Models\RefleksiGuru;
 use App\Models\PengaturanSekolah;
@@ -31,17 +32,16 @@ class RaportController extends Controller
         }
 
         $kelasId = request('id_kelas') ?? $kelasSaya->first()->id_kelas;
+        $semester = request('semester') ?? 1;
 
         $siswa = Siswa::where('id_kelas', $kelasId)
             ->orderBy('nama_siswa')
             ->get();
 
         foreach ($siswa as $item) {
-
             $item->statusRaport = count(
-                $this->validasiRaport($item->id_siswa)
+                $this->validasiRaport($item->id_siswa, $semester)
             ) == 0;
-
         }
 
         return view(
@@ -49,6 +49,7 @@ class RaportController extends Controller
             compact(
                 'kelasSaya',
                 'kelasId',
+                'semester',
                 'siswa'
             )
         );
@@ -60,20 +61,19 @@ class RaportController extends Controller
 
     public function show($id)
     {
-        $kurang = $this->validasiRaport($id);
+        $semester = request('semester') ?? 1;
+        $kurang = $this->validasiRaport($id, $semester);
 
         if (count($kurang) > 0) {
-
             return redirect()
                 ->route('guru.raport.index')
                 ->with(
                     'error',
                     implode("\n", $kurang)
                 );
-
         }
 
-        $data = $this->getData($id);
+        $data = $this->getData($id, $semester);
 
         return view('guru.raport.show', $data);
     }
@@ -81,52 +81,92 @@ class RaportController extends Controller
     // ==================================================
     // CETAK PDF
     // ==================================================
-public function pdf($id)
-{
-    $kurang = $this->validasiRaport($id);
 
-    if (count($kurang) > 0) {
-        return redirect()
-            ->route('guru.raport.index')
-            ->with('error', implode("\n", $kurang));
+    public function pdf($id)
+    {
+        $semester = request('semester') ?? 1;
+        $kurang = $this->validasiRaport($id, $semester);
+
+        if (count($kurang) > 0) {
+            return redirect()
+                ->route('guru.raport.index')
+                ->with('error', implode("\n", $kurang));
+        }
+
+        $data = $this->getData($id, $semester);
+
+        $pdf = Pdf::loadView('guru.raport.pdf', $data);
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->stream(
+            'Raport_' . str_replace(' ', '_', $data['siswa']->nama_siswa) . '_S' . $data['semester'] . '.pdf'
+        );
     }
 
-    $data = $this->getData($id);
+    // ==================================================
+    // CETAK SEMUA RAPORT SATU KELAS
+    // ==================================================
 
-    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('guru.raport.pdf', $data);
+    public function cetakSemua()
+    {
+        $kelasSaya = Kelas::where('id_user', auth()->id())->get();
 
-    $pdf->setPaper('f4', 'portrait');
+        if ($kelasSaya->isEmpty()) {
+            return back()->with('error', 'Anda belum memiliki kelas.');
+        }
 
-    return $pdf->stream(
-        'Raport_' . str_replace(' ', '_', $data['siswa']->nama_siswa) . '_S' . $data['semester'] . '.pdf'
-    );
-}
+        $kelasId = request('id_kelas') ?? $kelasSaya->first()->id_kelas;
+        $semester = request('semester') ?? 1;
+
+        $daftarSiswa = Siswa::where('id_kelas', $kelasId)
+            ->orderBy('nama_siswa')
+            ->get();
+
+        $semuaData = [];
+        foreach ($daftarSiswa as $s) {
+            if (count($this->validasiRaport($s->id_siswa, $semester)) === 0) {
+                $semuaData[] = $this->getData($s->id_siswa, $semester);
+            }
+        }
+
+        if (empty($semuaData)) {
+            return back()->with('error', 'Belum ada siswa dengan data raport yang lengkap.');
+        }
+
+        $pdf = Pdf::loadView('guru.raport.pdf_semua', compact('semuaData'));
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->stream('Raport_Semua_Siswa_S' . $semester . '.pdf');
+    }
 
     // ==================================================
     // AMBIL SEMUA DATA RAPORT
     // ==================================================
 
-    private function getData($id)
+    private function getData($id, $semester = 1)
     {
-                // ==========================
+        // ==========================
+        // DATA SISWA & KELAS
+        // ==========================
+
+        $siswa = Siswa::with('kelas.user')->findOrFail($id);
+
+        // ==========================
         // SEMESTER & TAHUN AJARAN
         // ==========================
 
-        $semester = 1;
-
-        $tahun_ajaran = date('Y') . '/' . (date('Y') + 1);
-
-        // ==========================
-        // DATA SISWA
-        // ==========================
-
-        $siswa = Siswa::with('kelas')->findOrFail($id);
+        $tahun_ajaran = $siswa->kelas->tahun_ajaran ?? (date('Y') . '/' . (date('Y') + 1));
 
         // ==========================
         // PROFIL SEKOLAH
         // ==========================
 
-        $pengaturan = PengaturanSekolah::first();
+        $pengaturan = PengaturanSekolah::first() ?? new PengaturanSekolah([
+            'nama_sekolah'   => 'TK AL-IKHLAS TALIWANG',
+            'alamat'         => 'Taliwang',
+            'kepala_sekolah' => 'Putri Balqis, S.E',
+            'nip_kepala'     => '-',
+        ]);
 
         // ==========================
         // ASPEK PERKEMBANGAN
@@ -146,17 +186,17 @@ public function pdf($id)
 
         $penilaian = Penilaian::where('id_siswa', $id)
             ->where('semester', $semester)
-            ->where('tahun_ajaran', $tahun_ajaran)
+            ->orderByDesc('updated_at')
             ->get()
             ->groupBy('id_indikator');
 
         // ==========================
-        // DESKRIPSI
+        // DESKRIPSI & FOTO ASPEK
         // ==========================
 
         $deskripsi = DeskripsiAspek::where('id_siswa', $id)
             ->where('semester', $semester)
-            ->where('tahun_ajaran', $tahun_ajaran)
+            ->orderBy('updated_at')
             ->get()
             ->keyBy('id_aspek');
 
@@ -174,17 +214,34 @@ public function pdf($id)
 
         $kegiatan = NilaiKegiatan::where('id_siswa', $id)
             ->where('semester', $semester)
-            ->where('tahun_ajaran', $tahun_ajaran)
+            ->orderByDesc('updated_at')
             ->get();
 
         // ==========================
-        // PRESENSI
+        // PRESENSI (REKAP DARI HARIAN + TABEL REKAP)
         // ==========================
 
-        $presensi = Presensi::where('id_siswa', $id)
+        $presensiHarian = Presensi::where('id_siswa', $id)
             ->where('semester', $semester)
-            ->where('tahun_ajaran', $tahun_ajaran)
+            ->get();
+
+        $presensiRekap = PresensiRaport::where('id_siswa', $id)
+            ->where('semester', $semester)
+            ->orderByDesc('updated_at')
             ->first();
+
+        $sakitCount = $presensiHarian->where('status', 'sakit')->count();
+        $izinCount  = $presensiHarian->where('status', 'izin')->count() ?: ($presensiRekap->izin ?? 0);
+        $alphaCount = $presensiHarian->where('status', 'tanpa_keterangan')->count() ?: ($presensiRekap->tanpa_keterangan ?? 0);
+        $hadirCount = $presensiHarian->where('status', 'hadir')->count() ?: ($presensiRekap->hadir ?? 0);
+
+        $presensi = (object) [
+            'hadir'            => $hadirCount,
+            'sakit'            => $sakitCount,
+            'izin'             => $izinCount,
+            'alpha'            => $alphaCount,
+            'tanpa_keterangan' => $alphaCount,
+        ];
 
         // ==========================
         // ANTROPOMETRI
@@ -192,7 +249,7 @@ public function pdf($id)
 
         $antropometri = Antropometri::where('id_siswa', $id)
             ->where('semester', $semester)
-            ->where('tahun_ajaran', $tahun_ajaran)
+            ->orderByDesc('updated_at')
             ->first();
 
         // ==========================
@@ -201,8 +258,12 @@ public function pdf($id)
 
         $refleksiGuru = RefleksiGuru::where('id_siswa', $id)
             ->where('semester', $semester)
-            ->where('tahun_ajaran', $tahun_ajaran)
+            ->orderByDesc('updated_at')
             ->first();
+
+        if ($refleksiGuru && empty($refleksiGuru->refleksi)) {
+            $refleksiGuru->refleksi = $refleksiGuru->catatan_guru;
+        }
 
         // ==========================
         // KIRIM KE VIEW
@@ -223,16 +284,13 @@ public function pdf($id)
             'refleksiGuru'
         );
     }
-        // ==================================================
+
+    // ==================================================
     // VALIDASI KELENGKAPAN RAPORT
     // ==================================================
 
-    private function validasiRaport($id)
+    private function validasiRaport($id, $semester = 1)
     {
-        $semester = 1;
-
-        $tahunAjaran = date('Y') . '/' . (date('Y') + 1);
-
         $pesan = [];
 
         // ==========================
@@ -242,12 +300,9 @@ public function pdf($id)
         if (
             Penilaian::where('id_siswa', $id)
                 ->where('semester', $semester)
-                ->where('tahun_ajaran', $tahunAjaran)
                 ->count() == 0
         ) {
-
             $pesan[] = "Penilaian belum diinput.";
-
         }
 
         // ==========================
@@ -257,42 +312,20 @@ public function pdf($id)
         $aspek = AspekPerkembangan::all();
 
         foreach ($aspek as $item) {
-
             $desk = DeskripsiAspek::where('id_siswa', $id)
                 ->where('id_aspek', $item->id_aspek)
                 ->where('semester', $semester)
-                ->where('tahun_ajaran', $tahunAjaran)
+                ->orderByDesc('updated_at')
                 ->first();
 
             if (!$desk) {
-
                 $pesan[] = "Deskripsi aspek '{$item->nama_aspek}' belum diisi.";
-
                 continue;
             }
 
-            if (trim($desk->deskripsi) == '') {
-
+            if (trim((string) $desk->deskripsi) == '') {
                 $pesan[] = "Deskripsi aspek '{$item->nama_aspek}' masih kosong.";
-
             }
-
-            // FOTO TIDAK WAJIB
-            // Jika nanti sekolah mewajibkan foto,
-            // tinggal buka komentar di bawah.
-
-            /*
-            if (
-                empty($desk->foto1) &&
-                empty($desk->foto2) &&
-                empty($desk->foto3)
-            ) {
-
-                $pesan[] = "Foto kegiatan aspek '{$item->nama_aspek}' belum diupload.";
-
-            }
-            */
-
         }
 
         // ==========================
@@ -302,27 +335,24 @@ public function pdf($id)
         if (
             NilaiKegiatan::where('id_siswa', $id)
                 ->where('semester', $semester)
-                ->where('tahun_ajaran', $tahunAjaran)
                 ->count() == 0
         ) {
-
             $pesan[] = "Kegiatan tambahan belum diinput.";
-
         }
 
         // ==========================
         // PRESENSI
         // ==========================
 
-        if (
-            !Presensi::where('id_siswa', $id)
+        $adaPresensi = Presensi::where('id_siswa', $id)
+            ->where('semester', $semester)
+            ->exists()
+            || PresensiRaport::where('id_siswa', $id)
                 ->where('semester', $semester)
-                ->where('tahun_ajaran', $tahunAjaran)
-                ->exists()
-        ) {
+                ->exists();
 
+        if (!$adaPresensi) {
             $pesan[] = "Presensi belum diinput.";
-
         }
 
         // ==========================
@@ -332,27 +362,22 @@ public function pdf($id)
         if (
             !Antropometri::where('id_siswa', $id)
                 ->where('semester', $semester)
-                ->where('tahun_ajaran', $tahunAjaran)
                 ->exists()
         ) {
-
             $pesan[] = "Antropometri belum diinput.";
-
         }
 
         // ==========================
         // REFLEKSI GURU
         // ==========================
 
-        if (
-            !RefleksiGuru::where('id_siswa', $id)
-                ->where('semester', $semester)
-                ->where('tahun_ajaran', $tahunAjaran)
-                ->exists()
-        ) {
+        $refleksi = RefleksiGuru::where('id_siswa', $id)
+            ->where('semester', $semester)
+            ->orderByDesc('updated_at')
+            ->first();
 
+        if (!$refleksi || trim((string) $refleksi->catatan_guru) === '') {
             $pesan[] = "Refleksi guru belum diisi.";
-
         }
 
         return $pesan;
