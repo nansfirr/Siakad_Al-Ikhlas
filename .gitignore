@@ -14,11 +14,13 @@
 /.zed
 /auth.json
 /node_modules
-/public/build
 /public/hot
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/framework/views/*.php
+/storage/fonts/*.ufm.json
+/storage/fonts/*.php
 /vendor
 Homestead.json
 Homestead.yaml
