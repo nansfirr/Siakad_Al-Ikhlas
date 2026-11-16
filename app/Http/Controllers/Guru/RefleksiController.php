@@ -54,12 +54,15 @@ class RefleksiController extends Controller
             'semester'     => 'required|in:1,2',
             'tahun_ajaran' => 'required|string',
             'refleksi'     => 'required|array',
-            'refleksi.*.catatan_guru' => 'required|string|max:1000',
+            'refleksi.*.catatan_guru' => 'nullable|string|max:2000',
         ]);
 
         DB::beginTransaction();
         try {
             foreach ($request->refleksi as $id_siswa => $data) {
+                if (trim((string) ($data['catatan_guru'] ?? '')) === '') {
+                    continue;
+                }
                 RefleksiGuru::updateOrCreate(
                     [
                         'id_siswa'     => $id_siswa,

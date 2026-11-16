@@ -54,14 +54,21 @@ class AntropometriController extends Controller
             'semester'     => 'required|in:1,2',
             'tahun_ajaran' => 'required|string',
             'antropometri' => 'required|array',
-            'antropometri.*.tinggi_badan'   => 'required|numeric|min:0',
-            'antropometri.*.berat_badan'    => 'required|numeric|min:0',
-            'antropometri.*.lingkar_kepala' => 'required|numeric|min:0',
+            'antropometri.*.tinggi_badan'   => 'nullable|numeric|min:0',
+            'antropometri.*.berat_badan'    => 'nullable|numeric|min:0',
+            'antropometri.*.lingkar_kepala' => 'nullable|numeric|min:0',
         ]);
 
         DB::beginTransaction();
         try {
             foreach ($request->antropometri as $id_siswa => $data) {
+                if (
+                    ($data['tinggi_badan'] ?? '') === '' &&
+                    ($data['berat_badan'] ?? '') === '' &&
+                    ($data['lingkar_kepala'] ?? '') === ''
+                ) {
+                    continue;
+                }
                 Antropometri::updateOrCreate(
                     [
                         'id_siswa'     => $id_siswa,
@@ -69,9 +76,9 @@ class AntropometriController extends Controller
                         'tahun_ajaran' => $request->tahun_ajaran,
                     ],
                     [
-                        'tinggi_badan'   => $data['tinggi_badan'],
-                        'berat_badan'    => $data['berat_badan'],
-                        'lingkar_kepala' => $data['lingkar_kepala'],
+                        'tinggi_badan'   => $data['tinggi_badan'] ?? 0,
+                        'berat_badan'    => $data['berat_badan'] ?? 0,
+                        'lingkar_kepala' => $data['lingkar_kepala'] ?? 0,
                     ]
                 );
             }

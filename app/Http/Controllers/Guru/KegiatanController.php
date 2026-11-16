@@ -67,22 +67,27 @@ class KegiatanController extends Controller
         $request->validate([
             'semester'     => 'required|in:1,2',
             'tahun_ajaran' => 'required|string',
-            'nilai'        => 'required|array',
-            'nilai.*.nilai'=> 'required|in:BB,MB,BSH,BSB',
+            'nilai'        => 'nullable|array',
+            'nilai.*.nilai'=> 'nullable|in:BB,MB,BSH,BSB',
         ]);
 
         DB::beginTransaction();
         try {
-            foreach ($request->nilai as $id_item => $data) {
-                NilaiKegiatan::updateOrCreate(
-                    [
-                        'id_siswa'     => $siswa->id_siswa,
-                        'id_item'      => $id_item,
-                        'semester'     => $request->semester,
-                        'tahun_ajaran' => $request->tahun_ajaran,
-                    ],
-                    ['nilai' => $data['nilai']]
-                );
+            if ($request->has('nilai') && is_array($request->nilai)) {
+                foreach ($request->nilai as $id_item => $data) {
+                    if (empty($data['nilai'])) {
+                        continue;
+                    }
+                    NilaiKegiatan::updateOrCreate(
+                        [
+                            'id_siswa'     => $siswa->id_siswa,
+                            'id_item'      => $id_item,
+                            'semester'     => $request->semester,
+                            'tahun_ajaran' => $request->tahun_ajaran,
+                        ],
+                        ['nilai' => $data['nilai']]
+                    );
+                }
             }
             DB::commit();
             return redirect()->route('guru.kegiatan.index', [

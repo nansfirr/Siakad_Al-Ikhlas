@@ -88,28 +88,33 @@ class PenilaianController extends Controller
 
         $request->validate([
             'semester'          => 'required|in:1,2',
-            'penilaian'         => 'required|array',
-            'penilaian.*.nilai' => 'required|in:BB,MB,BSH,BSB',
+            'penilaian'         => 'nullable|array',
+            'penilaian.*.nilai' => 'nullable|in:BB,MB,BSH,BSB',
             'deskripsi'         => 'nullable|array',
             'foto'              => 'nullable|array',
-            'foto.*.*'          => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
+            'foto.*.*'          => 'nullable|image|max:20480',
         ]);
 
         DB::beginTransaction();
 
         try {
-            foreach ($request->penilaian as $idIndikator => $data) {
-                Penilaian::updateOrCreate(
-                    [
-                        'id_siswa'     => $siswa->id_siswa,
-                        'id_indikator' => $idIndikator,
-                        'semester'     => $request->semester,
-                    ],
-                    [
-                        'nilai'        => $data['nilai'],
-                        'tahun_ajaran' => $tahunAjaran,
-                    ]
-                );
+            if ($request->has('penilaian') && is_array($request->penilaian)) {
+                foreach ($request->penilaian as $idIndikator => $data) {
+                    if (empty($data['nilai'])) {
+                        continue;
+                    }
+                    Penilaian::updateOrCreate(
+                        [
+                            'id_siswa'     => $siswa->id_siswa,
+                            'id_indikator' => $idIndikator,
+                            'semester'     => $request->semester,
+                        ],
+                        [
+                            'nilai'        => $data['nilai'],
+                            'tahun_ajaran' => $tahunAjaran,
+                        ]
+                    );
+                }
             }
 
             if ($request->has('deskripsi')) {

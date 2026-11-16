@@ -47,7 +47,7 @@
                     <span class="text-muted fw-normal">| NIS: {{ $s->nis }}</span>
                 </label>
                 <textarea name="refleksi[{{ $s->id_siswa }}][catatan_guru]" 
-                          class="form-control" rows="3" required
+                          class="form-control" rows="3"
                           placeholder="Tuliskan catatan perkembangan dan refleksi untuk {{ $s->nama_siswa }}...">{{ old('refleksi.'.$s->id_siswa.'.catatan_guru', $ref?->catatan_guru) }}</textarea>
             </div>
         </div>

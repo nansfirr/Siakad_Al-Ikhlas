@@ -247,6 +247,18 @@
         </div>
     @endif
 
+    @if($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show">
+            <strong>Perhatian:</strong>
+            <ul class="mb-0 mt-1">
+                @foreach($errors->all() as $err)
+                    <li>{{ $err }}</li>
+                @endforeach
+            </ul>
+            <button class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     @yield('content')
 
     <footer>

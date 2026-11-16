@@ -43,13 +43,15 @@
                         <td>{{ $item->urutan }}</td>
                         <td>{{ $item->nama_item }}</td>
                         @foreach(['BB','MB','BSH','BSB'] as $nilai)
+                        @php
+                            $valPilih = old("nilai.{$item->id_item}.nilai", $existing?->nilai ?? '');
+                        @endphp
                         <td class="text-center">
                             <input type="radio"
                                 name="nilai[{{ $item->id_item }}][nilai]"
                                 value="{{ $nilai }}"
                                 class="form-check-input"
-                                {{ ($existing?->nilai ?? '') == $nilai ? 'checked' : '' }}
-                                required>
+                                {{ $valPilih == $nilai ? 'checked' : '' }}>
                         </td>
                         @endforeach
                     </tr>

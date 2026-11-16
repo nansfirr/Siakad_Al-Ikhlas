@@ -66,13 +66,15 @@
                             <td>{{ $ind->capaian_pembelajaran }}</td>
 
                             @foreach(['BB','MB','BSH','BSB'] as $nilai)
+                                @php
+                                    $valPilih = old("penilaian.{$ind->id_indikator}.nilai", $existing?->nilai ?? '');
+                                @endphp
                                 <td class="text-center">
                                     <input type="radio"
                                         name="penilaian[{{ $ind->id_indikator }}][nilai]"
                                         value="{{ $nilai }}"
                                         class="form-check-input"
-                                        {{ ($existing?->nilai ?? '') == $nilai ? 'checked' : '' }}
-                                        required>
+                                        {{ $valPilih == $nilai ? 'checked' : '' }}>
                                 </td>
                             @endforeach
                         </tr>
@@ -89,7 +91,7 @@
             <label class="form-label fw-bold">Deskripsi Perkembangan</label>
             <textarea name="deskripsi[{{ $a->id_aspek }}]"
                       class="form-control"
-                      rows="3">{{ $deskripsiAspek[$a->id_aspek]->deskripsi ?? '' }}</textarea>
+                      rows="3">{{ old("deskripsi.{$a->id_aspek}", $deskripsiAspek[$a->id_aspek]->deskripsi ?? '') }}</textarea>
         </div>
 
         {{-- ===================== --}}
