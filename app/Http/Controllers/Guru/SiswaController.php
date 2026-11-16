@@ -59,9 +59,9 @@ class SiswaController extends Controller
             'agama'           => 'nullable|string|max:50',
             'kewarganegaraan' => 'nullable|string|max:50',
             'alamat'          => 'nullable|string',
-            'nama_wali'       => 'required|string|max:100',
+            'nama_wali'       => 'nullable|string|max:100',
             'pekerjaan_wali'  => 'nullable|string|max:100',
-            'nama_ibu'        => 'nullable|string|max:100',
+            'nama_ibu'        => 'required|string|max:100',
             'pekerjaan_ibu'   => 'nullable|string|max:100',
             'foto'            => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);

@@ -551,13 +551,13 @@
                     <td style="border:none; padding:3px 0;"></td>
                     <td style="border:none; padding:3px 0;">Nama Ayah/Wali</td>
                     <td style="border:none; padding:3px 0;">:</td>
-                    <td style="border:none; padding:3px 0;">{{ $siswa->nama_wali ?? '-' }}</td>
+                    <td style="border:none; padding:3px 0;">{{ !empty($siswa->nama_wali) ? $siswa->nama_wali : '-' }}</td>
                 </tr>
                 <tr>
                     <td style="border:none; padding:3px 0;"></td>
-                    <td style="border:none; padding:3px 0;">Pekerjaan/Wali</td>
+                    <td style="border:none; padding:3px 0;">Pekerjaan Ayah/Wali</td>
                     <td style="border:none; padding:3px 0;">:</td>
-                    <td style="border:none; padding:3px 0;">{{ $siswa->pekerjaan_wali ?? '-' }}</td>
+                    <td style="border:none; padding:3px 0;">{{ !empty($siswa->pekerjaan_wali) ? $siswa->pekerjaan_wali : '-' }}</td>
                 </tr>
                 <tr>
                     <td style="border:none; padding:3px 0;">9.</td>
@@ -569,13 +569,13 @@
                     <td style="border:none; padding:3px 0;"></td>
                     <td style="border:none; padding:3px 0;">Nama Ibu/Wali</td>
                     <td style="border:none; padding:3px 0;">:</td>
-                    <td style="border:none; padding:3px 0;">{{ $siswa->nama_ibu ?? '-' }}</td>
+                    <td style="border:none; padding:3px 0;">{{ !empty($siswa->nama_ibu) ? $siswa->nama_ibu : '-' }}</td>
                 </tr>
                 <tr>
                     <td style="border:none; padding:3px 0;"></td>
                     <td style="border:none; padding:3px 0;">Pekerjaan Ibu/Wali</td>
                     <td style="border:none; padding:3px 0;">:</td>
-                    <td style="border:none; padding:3px 0;">{{ $siswa->pekerjaan_ibu ?? '-' }}</td>
+                    <td style="border:none; padding:3px 0;">{{ !empty($siswa->pekerjaan_ibu) ? $siswa->pekerjaan_ibu : '-' }}</td>
                 </tr>
             </table>
 

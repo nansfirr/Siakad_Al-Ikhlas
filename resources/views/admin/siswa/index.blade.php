@@ -18,8 +18,8 @@
                     <th>Nama Siswa & TTL</th>
                     <th>Kelas</th>
                     <th>L/P</th>
-                    <th>Ayah / Wali</th>
-                    <th>Ibu</th>
+                    <th>Ayah/Wali</th>
+                    <th>Ibu/Wali</th>
                     <th>Alamat</th>
                     <th>Aksi</th>
                 </tr>

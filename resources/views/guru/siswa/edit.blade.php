@@ -92,29 +92,29 @@
                 </div>
             </div>
 
-            <h6 class="fw-bold text-success border-bottom pb-2 mb-3">B. Data Orang Tua / Wali</h6>
+            <h6 class="fw-bold text-success border-bottom pb-2 mb-3">B. Data Orang Tua</h6>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Nama Ayah / Wali <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold">Nama Ayah/Wali</label>
                     <input type="text" name="nama_wali" class="form-control @error('nama_wali') is-invalid @enderror"
-                        value="{{ old('nama_wali', $siswa->nama_wali) }}" placeholder="Nama lengkap Ayah/Wali">
+                        value="{{ old('nama_wali', $siswa->nama_wali) }}" placeholder="Nama lengkap Ayah/Wali (opsional)">
                     @error('nama_wali')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Pekerjaan Ayah / Wali</label>
+                    <label class="form-label fw-semibold">Pekerjaan Ayah/Wali</label>
                     <input type="text" name="pekerjaan_wali" class="form-control @error('pekerjaan_wali') is-invalid @enderror"
                         value="{{ old('pekerjaan_wali', $siswa->pekerjaan_wali) }}" placeholder="Contoh: Wiraswasta / PNS / Petani">
                     @error('pekerjaan_wali')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Nama Ibu / Wali</label>
-                    <input type="text" name="nama_ibu" class="form-control @error('nama_ibu') is-invalid @enderror"
-                        value="{{ old('nama_ibu', $siswa->nama_ibu) }}" placeholder="Nama lengkap Ibu/Wali">
+                    <label class="form-label fw-semibold">Nama Ibu/Wali <span class="text-danger">*</span></label>
+                    <input type="text" name="nama_ibu" required class="form-control @error('nama_ibu') is-invalid @enderror"
+                        value="{{ old('nama_ibu', $siswa->nama_ibu) }}" placeholder="Nama lengkap Ibu/Wali (wajib diisi)">
                     @error('nama_ibu')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Pekerjaan Ibu / Wali</label>
+                    <label class="form-label fw-semibold">Pekerjaan Ibu/Wali</label>
                     <input type="text" name="pekerjaan_ibu" class="form-control @error('pekerjaan_ibu') is-invalid @enderror"
                         value="{{ old('pekerjaan_ibu', $siswa->pekerjaan_ibu) }}" placeholder="Contoh: Ibu Rumah Tangga / Guru / Wiraswasta">
                     @error('pekerjaan_ibu')<div class="invalid-feedback">{{ $message }}</div>@enderror
