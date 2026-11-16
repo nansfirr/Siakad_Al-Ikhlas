@@ -114,6 +114,14 @@
                     <td>
 
                         <a
+                            href="{{ route('guru.siswa.edit',$item->id_siswa) }}"
+                            class="btn btn-warning btn-sm">
+
+                            ✏️ Biodata
+
+                        </a>
+
+                        <a
                             href="{{ route('guru.raport.show',$item->id_siswa) }}"
                             class="btn btn-primary btn-sm">
 

@@ -16,9 +16,17 @@ class Siswa extends Model
     protected $fillable = [
         'nis',
         'nama_siswa',
+        'tempat_lahir',
         'tanggal_lahir',
         'jenis_kelamin',
+        'anak_ke',
+        'agama',
+        'kewarganegaraan',
+        'alamat',
         'nama_wali',
+        'pekerjaan_wali',
+        'nama_ibu',
+        'pekerjaan_ibu',
         'foto',
         'id_kelas'
     ];

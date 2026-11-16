@@ -24,22 +24,29 @@ class SiswaController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'nis'           => 'required|unique:siswa,nis',
-            'nama_siswa'    => 'required|string|max:100',
-            'tanggal_lahir' => 'required|date',
-            'jenis_kelamin' => 'required|in:L,P',
-            'nama_wali'     => 'required|string|max:100',
-            'id_kelas'      => 'required|exists:kelas,id_kelas',
-            'foto'          => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        $validated = $request->validate([
+            'nis'             => 'required|unique:siswa,nis',
+            'nama_siswa'      => 'required|string|max:100',
+            'tempat_lahir'    => 'nullable|string|max:100',
+            'tanggal_lahir'   => 'required|date',
+            'jenis_kelamin'   => 'required|in:L,P',
+            'anak_ke'         => 'nullable|string|max:20',
+            'agama'           => 'nullable|string|max:50',
+            'kewarganegaraan' => 'nullable|string|max:50',
+            'alamat'          => 'nullable|string',
+            'nama_wali'       => 'required|string|max:100',
+            'pekerjaan_wali'  => 'nullable|string|max:100',
+            'nama_ibu'        => 'nullable|string|max:100',
+            'pekerjaan_ibu'   => 'nullable|string|max:100',
+            'id_kelas'        => 'required|exists:kelas,id_kelas',
+            'foto'            => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $data = $request->all();
         if ($request->hasFile('foto')) {
-            $data['foto'] = $request->file('foto')->store('foto-siswa', 'public');
+            $validated['foto'] = $request->file('foto')->store('foto-siswa', 'public');
         }
 
-        Siswa::create($data);
+        Siswa::create($validated);
         return redirect()->route('admin.siswa.index')->with('success', 'Siswa berhasil ditambahkan.');
     }
 
@@ -51,26 +58,34 @@ class SiswaController extends Controller
 
     public function update(Request $request, Siswa $siswa)
     {
-        $request->validate([
-            'nis'           => 'required|unique:siswa,nis,'.$siswa->id_siswa.',id_siswa',
-            'nama_siswa'    => 'required|string|max:100',
-            'tanggal_lahir' => 'required|date',
-            'jenis_kelamin' => 'required|in:L,P',
-            'nama_wali'     => 'required|string|max:100',
-            'id_kelas'      => 'required|exists:kelas,id_kelas',
-            'foto'          => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        $validated = $request->validate([
+            'nis'             => 'required|unique:siswa,nis,'.$siswa->id_siswa.',id_siswa',
+            'nama_siswa'      => 'required|string|max:100',
+            'tempat_lahir'    => 'nullable|string|max:100',
+            'tanggal_lahir'   => 'required|date',
+            'jenis_kelamin'   => 'required|in:L,P',
+            'anak_ke'         => 'nullable|string|max:20',
+            'agama'           => 'nullable|string|max:50',
+            'kewarganegaraan' => 'nullable|string|max:50',
+            'alamat'          => 'nullable|string',
+            'nama_wali'       => 'required|string|max:100',
+            'pekerjaan_wali'  => 'nullable|string|max:100',
+            'nama_ibu'        => 'nullable|string|max:100',
+            'pekerjaan_ibu'   => 'nullable|string|max:100',
+            'id_kelas'        => 'required|exists:kelas,id_kelas',
+            'foto'            => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $data = $request->only('nis', 'nama_siswa', 'tanggal_lahir', 'jenis_kelamin', 'nama_wali', 'id_kelas');
+        unset($validated['foto']);
 
         if ($request->hasFile('foto')) {
             if ($siswa->foto) {
                 Storage::disk('public')->delete($siswa->foto);
             }
-            $data['foto'] = $request->file('foto')->store('foto-siswa', 'public');
+            $validated['foto'] = $request->file('foto')->store('foto-siswa', 'public');
         }
 
-        $siswa->update($data);
+        $siswa->update($validated);
 
         return redirect()->route('admin.siswa.index')->with('success', 'Data siswa berhasil diperbarui.');
     }

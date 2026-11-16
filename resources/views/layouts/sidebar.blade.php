@@ -90,6 +90,12 @@
         Dashboard
     </a>
 
+    <a href="{{ route('guru.siswa.index') }}"
+       class="nav-link {{ request()->routeIs('guru.siswa*') ? 'active' : '' }}">
+        <i class="bi bi-people me-2"></i>
+        Biodata Siswa
+    </a>
+
     <a href="{{ route('guru.presensi.index') }}"
        class="nav-link {{ request()->routeIs('guru.presensi*') ? 'active' : '' }}">
         <i class="bi bi-calendar-check me-2"></i>

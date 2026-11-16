@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\{
 };
 use App\Http\Controllers\Guru\{
     DashboardController as GuruDashboard,
+    SiswaController as GuruSiswaController,
     PresensiController,
     PenilaianController,
     KegiatanController,
@@ -84,6 +85,13 @@ Route::middleware(['auth', 'role:guru'])
     ->group(function () {
 
         Route::get('/dashboard', [GuruDashboard::class, 'index'])->name('dashboard');
+
+        // Biodata Siswa & Orang Tua
+        Route::controller(GuruSiswaController::class)->group(function () {
+            Route::get('/siswa', 'index')->name('siswa.index');
+            Route::get('/siswa/{siswa}/edit', 'edit')->name('siswa.edit');
+            Route::put('/siswa/{siswa}', 'update')->name('siswa.update');
+        });
 
         // Presensi
         Route::controller(PresensiController::class)->group(function () {
