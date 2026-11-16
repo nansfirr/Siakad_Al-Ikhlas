@@ -21,9 +21,9 @@
                 @error('tahun_ajaran')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="mb-4">
-                <label class="form-label fw-semibold">Wali Kelas</label>
+                <label class="form-label fw-semibold">Wali Kelas <span class="text-muted small">(opsional)</span></label>
                 <select name="id_user" class="form-select @error('id_user') is-invalid @enderror">
-                    <option value="">-- Pilih Guru --</option>
+                    <option value="">-- Belum Ditentukan / Guru Umum --</option>
                     @foreach($guru as $g)
                         <option value="{{ $g->id }}"
                             {{ old('id_user', $kelas->id_user) == $g->id ? 'selected' : '' }}>

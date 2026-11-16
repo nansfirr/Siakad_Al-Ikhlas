@@ -35,6 +35,10 @@
                 class="form-select"
                 onchange="this.form.submit()">
 
+                <option value="semua" {{ $kelasId == 'semua' ? 'selected' : '' }}>
+                    -- Semua Kelas --
+                </option>
+
                 @foreach($kelasSaya as $kelas)
 
                     <option

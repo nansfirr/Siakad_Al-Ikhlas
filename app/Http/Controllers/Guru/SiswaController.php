@@ -12,40 +12,91 @@ class SiswaController extends Controller
 {
     public function index(Request $request)
     {
-        $kelasSaya = Kelas::where('id_user', auth()->id())->get();
+        $kelasDiampu = Kelas::where('id_user', auth()->id())->get();
+        $semuaAkses  = $kelasDiampu->isEmpty();
 
-        if ($kelasSaya->isEmpty()) {
-            return view('guru.siswa.index', [
-                'siswa'     => collect(),
-                'kelasSaya' => collect(),
-                'kelasId'   => null,
-            ]);
+        $kelasSaya = $semuaAkses
+            ? Kelas::orderBy('nama_kelas')->get()
+            : $kelasDiampu;
+
+        $defaultKelasId = $semuaAkses
+            ? 'semua'
+            : ($kelasSaya->first()?->id_kelas ?? 'semua');
+
+        $kelasId = $request->id_kelas ?? $defaultKelasId;
+
+        $query = Siswa::with('kelas')->orderBy('nama_siswa');
+
+        if ($kelasId !== 'semua' && !empty($kelasId)) {
+            $query->where('id_kelas', $kelasId);
+        } elseif (!$semuaAkses) {
+            $query->whereIn('id_kelas', $kelasSaya->pluck('id_kelas'));
         }
 
-        $kelasId = $request->id_kelas ?? $kelasSaya->first()->id_kelas;
+        $siswa = $query->get();
 
-        $siswa = Siswa::with('kelas')
-            ->where('id_kelas', $kelasId)
-            ->orderBy('nama_siswa')
-            ->get();
+        return view('guru.siswa.index', compact('siswa', 'kelasSaya', 'kelasId', 'semuaAkses'));
+    }
 
-        return view('guru.siswa.index', compact('siswa', 'kelasSaya', 'kelasId'));
+    public function create()
+    {
+        $kelasDiampu = Kelas::where('id_user', auth()->id())->get();
+        $kelas = $kelasDiampu->isEmpty()
+            ? Kelas::orderBy('nama_kelas')->get()
+            : $kelasDiampu;
+
+        return view('guru.siswa.create', compact('kelas'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'nis'             => 'required|unique:siswa,nis',
+            'nama_siswa'      => 'required|string|max:100',
+            'tempat_lahir'    => 'nullable|string|max:100',
+            'tanggal_lahir'   => 'required|date',
+            'jenis_kelamin'   => 'required|in:L,P',
+            'anak_ke'         => 'nullable|string|max:20',
+            'agama'           => 'nullable|string|max:50',
+            'kewarganegaraan' => 'nullable|string|max:50',
+            'alamat'          => 'nullable|string',
+            'nama_wali'       => 'nullable|string|max:100',
+            'pekerjaan_wali'  => 'nullable|string|max:100',
+            'nama_ibu'        => 'required|string|max:100',
+            'pekerjaan_ibu'   => 'nullable|string|max:100',
+            'id_kelas'        => 'required|exists:kelas,id_kelas',
+            'foto'            => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
+
+        if ($request->hasFile('foto')) {
+            $validated['foto'] = $request->file('foto')->store('foto-siswa', 'public');
+        }
+
+        $siswa = Siswa::create($validated);
+
+        return redirect()
+            ->route('guru.siswa.index', ['id_kelas' => $siswa->id_kelas])
+            ->with('success', 'Data siswa berhasil ditambahkan.');
     }
 
     public function edit(Siswa $siswa)
     {
-        $kelasSayaIds = Kelas::where('id_user', auth()->id())->pluck('id_kelas');
-        if (!$kelasSayaIds->contains($siswa->id_kelas)) {
+        $kelasDiampu = Kelas::where('id_user', auth()->id())->get();
+        if ($kelasDiampu->isNotEmpty() && !$kelasDiampu->pluck('id_kelas')->contains($siswa->id_kelas)) {
             abort(403, 'Anda tidak memiliki akses ke siswa di kelas ini.');
         }
 
-        return view('guru.siswa.edit', compact('siswa'));
+        $kelas = $kelasDiampu->isEmpty()
+            ? Kelas::orderBy('nama_kelas')->get()
+            : $kelasDiampu;
+
+        return view('guru.siswa.edit', compact('siswa', 'kelas'));
     }
 
     public function update(Request $request, Siswa $siswa)
     {
-        $kelasSayaIds = Kelas::where('id_user', auth()->id())->pluck('id_kelas');
-        if (!$kelasSayaIds->contains($siswa->id_kelas)) {
+        $kelasDiampu = Kelas::where('id_user', auth()->id())->get();
+        if ($kelasDiampu->isNotEmpty() && !$kelasDiampu->pluck('id_kelas')->contains($siswa->id_kelas)) {
             abort(403, 'Anda tidak memiliki akses ke siswa di kelas ini.');
         }
 
@@ -63,10 +114,14 @@ class SiswaController extends Controller
             'pekerjaan_wali'  => 'nullable|string|max:100',
             'nama_ibu'        => 'required|string|max:100',
             'pekerjaan_ibu'   => 'nullable|string|max:100',
+            'id_kelas'        => 'nullable|exists:kelas,id_kelas',
             'foto'            => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
         unset($validated['foto']);
+        if (empty($validated['id_kelas'])) {
+            unset($validated['id_kelas']);
+        }
 
         if ($request->hasFile('foto')) {
             if ($siswa->foto) {

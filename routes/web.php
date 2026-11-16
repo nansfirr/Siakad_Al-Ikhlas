@@ -89,6 +89,8 @@ Route::middleware(['auth', 'role:guru'])
         // Biodata Siswa & Orang Tua
         Route::controller(GuruSiswaController::class)->group(function () {
             Route::get('/siswa', 'index')->name('siswa.index');
+            Route::get('/siswa/create', 'create')->name('siswa.create');
+            Route::post('/siswa', 'store')->name('siswa.store');
             Route::get('/siswa/{siswa}/edit', 'edit')->name('siswa.edit');
             Route::put('/siswa/{siswa}', 'update')->name('siswa.update');
         });

@@ -2,21 +2,28 @@
 @section('title', 'Biodata Siswa & Orang Tua')
 @section('content')
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+    <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
         <h6 class="fw-bold mb-0"><i class="bi bi-people me-2 text-success"></i>Biodata Siswa & Orang Tua (Raport)</h6>
 
-        @if($kelasSaya->isNotEmpty())
-        <form method="GET" class="d-flex align-items-center gap-2">
-            <label class="small text-muted mb-0">Kelas:</label>
-            <select name="id_kelas" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
-                @foreach($kelasSaya as $kelas)
-                    <option value="{{ $kelas->id_kelas }}" {{ $kelasId == $kelas->id_kelas ? 'selected' : '' }}>
-                        {{ $kelas->nama_kelas }} ({{ $kelas->tahun_ajaran }})
-                    </option>
-                @endforeach
-            </select>
-        </form>
-        @endif
+        <div class="d-flex align-items-center gap-2">
+            @if($kelasSaya->isNotEmpty())
+            <form method="GET" class="d-flex align-items-center gap-2 mb-0">
+                <label class="small text-muted mb-0">Kelas:</label>
+                <select name="id_kelas" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                    <option value="semua" {{ $kelasId == 'semua' ? 'selected' : '' }}>-- Semua Kelas --</option>
+                    @foreach($kelasSaya as $kelas)
+                        <option value="{{ $kelas->id_kelas }}" {{ $kelasId == $kelas->id_kelas ? 'selected' : '' }}>
+                            {{ $kelas->nama_kelas }} ({{ $kelas->tahun_ajaran }})
+                        </option>
+                    @endforeach
+                </select>
+            </form>
+            @endif
+
+            <a href="{{ route('guru.siswa.create') }}" class="btn btn-success btn-sm">
+                <i class="bi bi-plus-lg"></i> Tambah Siswa
+            </a>
+        </div>
     </div>
 
     <div class="card-body table-responsive">
@@ -27,6 +34,7 @@
                     <th>Foto</th>
                     <th>NIS</th>
                     <th>Nama Siswa & TTL</th>
+                    <th>Kelas</th>
                     <th>L/P</th>
                     <th>Ayah/Wali</th>
                     <th>Ibu/Wali</th>
@@ -58,6 +66,7 @@
                             @if($s->anak_ke) • Anak ke-{{ $s->anak_ke }} @endif
                         </small>
                     </td>
+                    <td>{{ $s->kelas->nama_kelas ?? '-' }}</td>
                     <td>{{ $s->jenis_kelamin }}</td>
                     <td>
                         <div>{{ $s->nama_wali ?? '-' }}</div>
@@ -81,7 +90,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="9" class="text-center text-muted py-4">Belum ada data siswa di kelas ini.</td>
+                    <td colspan="10" class="text-center text-muted py-4">Belum ada data siswa.</td>
                 </tr>
                 @endforelse
             </tbody>

@@ -25,18 +25,27 @@ class RaportController extends Controller
 
     public function index()
     {
-        $kelasSaya = Kelas::where('id_user', auth()->id())->get();
+        $kelasDiampu = Kelas::where('id_user', auth()->id())->get();
+        $semuaAkses  = $kelasDiampu->isEmpty();
 
-        if ($kelasSaya->isEmpty()) {
-            return back()->with('error', 'Anda belum memiliki kelas.');
-        }
+        $kelasSaya = $semuaAkses
+            ? Kelas::orderBy('nama_kelas')->get()
+            : $kelasDiampu;
 
-        $kelasId = request('id_kelas') ?? $kelasSaya->first()->id_kelas;
+        $defaultKelasId = $semuaAkses
+            ? 'semua'
+            : ($kelasSaya->first()?->id_kelas ?? 'semua');
+
+        $kelasId  = request('id_kelas') ?? $defaultKelasId;
         $semester = request('semester') ?? 1;
 
-        $siswa = Siswa::where('id_kelas', $kelasId)
-            ->orderBy('nama_siswa')
-            ->get();
+        $query = Siswa::with('kelas')->orderBy('nama_siswa');
+        if ($kelasId !== 'semua' && !empty($kelasId)) {
+            $query->where('id_kelas', $kelasId);
+        } elseif (!$semuaAkses) {
+            $query->whereIn('id_kelas', $kelasSaya->pluck('id_kelas'));
+        }
+        $siswa = $query->get();
 
         foreach ($siswa as $item) {
             $item->statusRaport = count(
@@ -49,6 +58,7 @@ class RaportController extends Controller
             compact(
                 'kelasSaya',
                 'kelasId',
+                'semuaAkses',
                 'semester',
                 'siswa'
             )
@@ -109,18 +119,27 @@ class RaportController extends Controller
 
     public function cetakSemua()
     {
-        $kelasSaya = Kelas::where('id_user', auth()->id())->get();
+        $kelasDiampu = Kelas::where('id_user', auth()->id())->get();
+        $semuaAkses  = $kelasDiampu->isEmpty();
 
-        if ($kelasSaya->isEmpty()) {
-            return back()->with('error', 'Anda belum memiliki kelas.');
-        }
+        $kelasSaya = $semuaAkses
+            ? Kelas::orderBy('nama_kelas')->get()
+            : $kelasDiampu;
 
-        $kelasId = request('id_kelas') ?? $kelasSaya->first()->id_kelas;
+        $defaultKelasId = $semuaAkses
+            ? 'semua'
+            : ($kelasSaya->first()?->id_kelas ?? 'semua');
+
+        $kelasId  = request('id_kelas') ?? $defaultKelasId;
         $semester = request('semester') ?? 1;
 
-        $daftarSiswa = Siswa::where('id_kelas', $kelasId)
-            ->orderBy('nama_siswa')
-            ->get();
+        $query = Siswa::with('kelas')->orderBy('nama_siswa');
+        if ($kelasId !== 'semua' && !empty($kelasId)) {
+            $query->where('id_kelas', $kelasId);
+        } elseif (!$semuaAkses) {
+            $query->whereIn('id_kelas', $kelasSaya->pluck('id_kelas'));
+        }
+        $daftarSiswa = $query->get();
 
         $semuaData = [];
         foreach ($daftarSiswa as $s) {
@@ -145,21 +164,9 @@ class RaportController extends Controller
 
     private function getData($id, $semester = 1)
     {
-        // ==========================
-        // DATA SISWA & KELAS
-        // ==========================
-
         $siswa = Siswa::with('kelas.user')->findOrFail($id);
 
-        // ==========================
-        // SEMESTER & TAHUN AJARAN
-        // ==========================
-
         $tahun_ajaran = $siswa->kelas->tahun_ajaran ?? (date('Y') . '/' . (date('Y') + 1));
-
-        // ==========================
-        // PROFIL SEKOLAH
-        // ==========================
 
         $pengaturan = PengaturanSekolah::first() ?? new PengaturanSekolah([
             'nama_sekolah'   => 'TK AL-IKHLAS TALIWANG',
@@ -167,10 +174,6 @@ class RaportController extends Controller
             'kepala_sekolah' => 'Putri Balqis, S.E',
             'nip_kepala'     => '-',
         ]);
-
-        // ==========================
-        // ASPEK PERKEMBANGAN
-        // ==========================
 
         $aspek = AspekPerkembangan::with([
             'indikatorPenilaian' => function ($q) {
@@ -180,29 +183,17 @@ class RaportController extends Controller
         ->orderBy('urutan')
         ->get();
 
-        // ==========================
-        // PENILAIAN
-        // ==========================
-
         $penilaian = Penilaian::where('id_siswa', $id)
             ->where('semester', $semester)
             ->orderByDesc('updated_at')
             ->get()
             ->groupBy('id_indikator');
 
-        // ==========================
-        // DESKRIPSI & FOTO ASPEK
-        // ==========================
-
         $deskripsi = DeskripsiAspek::where('id_siswa', $id)
             ->where('semester', $semester)
             ->orderBy('updated_at')
             ->get()
             ->keyBy('id_aspek');
-
-        // ==========================
-        // KEGIATAN TAMBAHAN
-        // ==========================
 
         $katagori = KatagoriKegiatan::with([
             'itemKegiatan' => function ($q) {
@@ -216,10 +207,6 @@ class RaportController extends Controller
             ->where('semester', $semester)
             ->orderByDesc('updated_at')
             ->get();
-
-        // ==========================
-        // PRESENSI (REKAP DARI HARIAN + TABEL REKAP)
-        // ==========================
 
         $presensiHarian = Presensi::where('id_siswa', $id)
             ->where('semester', $semester)
@@ -243,18 +230,10 @@ class RaportController extends Controller
             'tanpa_keterangan' => $alphaCount,
         ];
 
-        // ==========================
-        // ANTROPOMETRI
-        // ==========================
-
         $antropometri = Antropometri::where('id_siswa', $id)
             ->where('semester', $semester)
             ->orderByDesc('updated_at')
             ->first();
-
-        // ==========================
-        // REFLEKSI GURU
-        // ==========================
 
         $refleksiGuru = RefleksiGuru::where('id_siswa', $id)
             ->where('semester', $semester)
@@ -264,10 +243,6 @@ class RaportController extends Controller
         if ($refleksiGuru && empty($refleksiGuru->refleksi)) {
             $refleksiGuru->refleksi = $refleksiGuru->catatan_guru;
         }
-
-        // ==========================
-        // KIRIM KE VIEW
-        // ==========================
 
         return compact(
             'siswa',
@@ -293,10 +268,6 @@ class RaportController extends Controller
     {
         $pesan = [];
 
-        // ==========================
-        // PENILAIAN
-        // ==========================
-
         if (
             Penilaian::where('id_siswa', $id)
                 ->where('semester', $semester)
@@ -304,10 +275,6 @@ class RaportController extends Controller
         ) {
             $pesan[] = "Penilaian belum diinput.";
         }
-
-        // ==========================
-        // DESKRIPSI PER ASPEK
-        // ==========================
 
         $aspek = AspekPerkembangan::all();
 
@@ -328,10 +295,6 @@ class RaportController extends Controller
             }
         }
 
-        // ==========================
-        // KEGIATAN TAMBAHAN
-        // ==========================
-
         if (
             NilaiKegiatan::where('id_siswa', $id)
                 ->where('semester', $semester)
@@ -339,10 +302,6 @@ class RaportController extends Controller
         ) {
             $pesan[] = "Kegiatan tambahan belum diinput.";
         }
-
-        // ==========================
-        // PRESENSI
-        // ==========================
 
         $adaPresensi = Presensi::where('id_siswa', $id)
             ->where('semester', $semester)
@@ -355,10 +314,6 @@ class RaportController extends Controller
             $pesan[] = "Presensi belum diinput.";
         }
 
-        // ==========================
-        // ANTROPOMETRI
-        // ==========================
-
         if (
             !Antropometri::where('id_siswa', $id)
                 ->where('semester', $semester)
@@ -366,10 +321,6 @@ class RaportController extends Controller
         ) {
             $pesan[] = "Antropometri belum diinput.";
         }
-
-        // ==========================
-        // REFLEKSI GURU
-        // ==========================
 
         $refleksi = RefleksiGuru::where('id_siswa', $id)
             ->where('semester', $semester)

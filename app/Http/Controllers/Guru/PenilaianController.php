@@ -16,22 +16,32 @@ class PenilaianController extends Controller
 {
     public function index(Request $request)
     {
-        $kelasSaya = Kelas::where('id_user', auth()->id())->get();
+        $kelasDiampu = Kelas::where('id_user', auth()->id())->get();
+        $semuaAkses  = $kelasDiampu->isEmpty();
 
-        if ($kelasSaya->isEmpty()) {
-            return back()->with('error', 'Anda belum memiliki kelas yang diampu.');
-        }
+        $kelasSaya = $semuaAkses
+            ? Kelas::orderBy('nama_kelas')->get()
+            : $kelasDiampu;
 
-        $kelasId = $request->id_kelas ?? $kelasSaya->first()->id_kelas;
+        $defaultKelasId = $semuaAkses
+            ? 'semua'
+            : ($kelasSaya->first()?->id_kelas ?? 'semua');
+
+        $kelasId  = $request->id_kelas ?? $defaultKelasId;
         $semester = $request->semester ?? '1';
 
-        $siswa = Siswa::where('id_kelas', $kelasId)
-            ->orderBy('nama_siswa')
-            ->get();
+        $query = Siswa::with(['kelas', 'penilaian'])->orderBy('nama_siswa');
+        if ($kelasId !== 'semua' && !empty($kelasId)) {
+            $query->where('id_kelas', $kelasId);
+        } elseif (!$semuaAkses) {
+            $query->whereIn('id_kelas', $kelasSaya->pluck('id_kelas'));
+        }
+        $siswa = $query->get();
 
         return view('guru.penilaian.index', compact(
             'kelasSaya',
             'kelasId',
+            'semuaAkses',
             'semester',
             'siswa'
         ));
@@ -77,47 +87,33 @@ class PenilaianController extends Controller
         $tahunAjaran = date('Y') . '/' . (date('Y') + 1);
 
         $request->validate([
-            'semester' => 'required|in:1,2',
-            'penilaian' => 'required|array',
+            'semester'          => 'required|in:1,2',
+            'penilaian'         => 'required|array',
             'penilaian.*.nilai' => 'required|in:BB,MB,BSH,BSB',
-            'deskripsi' => 'nullable|array',
-            'foto' => 'nullable|array',
-            'foto.*.*' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
+            'deskripsi'         => 'nullable|array',
+            'foto'              => 'nullable|array',
+            'foto.*.*'          => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
         ]);
 
         DB::beginTransaction();
 
         try {
-
-            /*
-            |--------------------------------------------------------------------------
-            | SIMPAN NILAI INDIKATOR
-            |--------------------------------------------------------------------------
-            */
             foreach ($request->penilaian as $idIndikator => $data) {
-
                 Penilaian::updateOrCreate(
                     [
-                        'id_siswa' => $siswa->id_siswa,
+                        'id_siswa'     => $siswa->id_siswa,
                         'id_indikator' => $idIndikator,
-                        'semester' => $request->semester,
+                        'semester'     => $request->semester,
                     ],
                     [
-                        'nilai' => $data['nilai'],
+                        'nilai'        => $data['nilai'],
                         'tahun_ajaran' => $tahunAjaran,
                     ]
                 );
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | SIMPAN DESKRIPSI + 1-3 FOTO PER ASPEK
-            |--------------------------------------------------------------------------
-            */
             if ($request->has('deskripsi')) {
-
                 foreach ($request->deskripsi as $idAspek => $isiDeskripsi) {
-
                     $dataLama = DeskripsiAspek::where('id_siswa', $siswa->id_siswa)
                         ->where('id_aspek', $idAspek)
                         ->where('semester', $request->semester)
@@ -128,7 +124,6 @@ class PenilaianController extends Controller
                     $foto2 = $dataLama->foto2 ?? null;
                     $foto3 = $dataLama->foto3 ?? null;
 
-                    // FOTO 1
                     if ($request->hasFile("foto.$idAspek.0")) {
                         if ($foto1 && Storage::disk('public')->exists($foto1)) {
                             Storage::disk('public')->delete($foto1);
@@ -137,7 +132,6 @@ class PenilaianController extends Controller
                             ->store('deskripsi_aspek', 'public');
                     }
 
-                    // FOTO 2
                     if ($request->hasFile("foto.$idAspek.1")) {
                         if ($foto2 && Storage::disk('public')->exists($foto2)) {
                             Storage::disk('public')->delete($foto2);
@@ -146,7 +140,6 @@ class PenilaianController extends Controller
                             ->store('deskripsi_aspek', 'public');
                     }
 
-                    // FOTO 3
                     if ($request->hasFile("foto.$idAspek.2")) {
                         if ($foto3 && Storage::disk('public')->exists($foto3)) {
                             Storage::disk('public')->delete($foto3);
@@ -157,16 +150,16 @@ class PenilaianController extends Controller
 
                     DeskripsiAspek::updateOrCreate(
                         [
-                            'id_siswa' => $siswa->id_siswa,
-                            'id_aspek' => $idAspek,
-                            'semester' => $request->semester,
+                            'id_siswa'     => $siswa->id_siswa,
+                            'id_aspek'     => $idAspek,
+                            'semester'     => $request->semester,
                             'tahun_ajaran' => $tahunAjaran,
                         ],
                         [
                             'deskripsi' => $isiDeskripsi,
-                            'foto1' => $foto1,
-                            'foto2' => $foto2,
-                            'foto3' => $foto3,
+                            'foto1'     => $foto1,
+                            'foto2'     => $foto2,
+                            'foto3'     => $foto3,
                         ]
                     );
                 }
@@ -176,12 +169,12 @@ class PenilaianController extends Controller
 
             return redirect()
                 ->route('guru.penilaian.index', [
-                    'semester' => $request->semester
+                    'id_kelas' => $siswa->id_kelas,
+                    'semester' => $request->semester,
                 ])
                 ->with('success', 'Penilaian berhasil disimpan.');
 
         } catch (\Exception $e) {
-
             DB::rollBack();
 
             return back()

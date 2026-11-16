@@ -9,6 +9,7 @@
             <div class="col-md-3">
                 <label class="form-label fw-semibold small">Pilih Kelas</label>
                 <select name="id_kelas" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="semua" {{ $kelasId == 'semua' ? 'selected' : '' }}>-- Semua Kelas --</option>
                     @foreach($kelasSaya as $k)
                         <option value="{{ $k->id_kelas }}"
                             {{ $kelasId == $k->id_kelas ? 'selected' : '' }}>

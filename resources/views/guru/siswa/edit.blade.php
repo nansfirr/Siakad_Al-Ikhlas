@@ -13,13 +13,25 @@
 
             <h6 class="fw-bold text-success border-bottom pb-2 mb-3">A. Data Pribadi Siswa</h6>
             <div class="row g-3 mb-4">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label fw-semibold">NIS <span class="text-danger">*</span></label>
                     <input type="text" name="nis" class="form-control @error('nis') is-invalid @enderror"
                         value="{{ old('nis', $siswa->nis) }}">
                     @error('nis')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Kelas / Kelompok <span class="text-danger">*</span></label>
+                    <select name="id_kelas" class="form-select @error('id_kelas') is-invalid @enderror">
+                        @foreach($kelas as $k)
+                            <option value="{{ $k->id_kelas }}"
+                                {{ old('id_kelas', $siswa->id_kelas) == $k->id_kelas ? 'selected' : '' }}>
+                                {{ $k->nama_kelas }} ({{ $k->tahun_ajaran }})
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('id_kelas')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-4">
                     <label class="form-label fw-semibold">Jenis Kelamin <span class="text-danger">*</span></label>
                     <select name="jenis_kelamin" class="form-select @error('jenis_kelamin') is-invalid @enderror">
                         <option value="L" {{ old('jenis_kelamin', $siswa->jenis_kelamin) == 'L' ? 'selected' : '' }}>Laki-laki</option>

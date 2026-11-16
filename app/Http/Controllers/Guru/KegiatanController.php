@@ -14,18 +14,29 @@ class KegiatanController extends Controller
 {
     public function index(Request $request)
     {
-        $kelasSaya = Kelas::where('id_user', auth()->id())->get();
-        
-        if ($kelasSaya->isEmpty()) {
-            return back()->with('error', 'Anda belum memiliki kelas yang diampu.');
+        $kelasDiampu = Kelas::where('id_user', auth()->id())->get();
+        $semuaAkses  = $kelasDiampu->isEmpty();
+
+        $kelasSaya = $semuaAkses
+            ? Kelas::orderBy('nama_kelas')->get()
+            : $kelasDiampu;
+
+        $defaultKelasId = $semuaAkses
+            ? 'semua'
+            : ($kelasSaya->first()?->id_kelas ?? 'semua');
+
+        $kelasId  = $request->id_kelas ?? $defaultKelasId;
+        $semester = $request->semester ?? '1';
+
+        $query = Siswa::with(['kelas', 'nilaiKegiatan'])->orderBy('nama_siswa');
+        if ($kelasId !== 'semua' && !empty($kelasId)) {
+            $query->where('id_kelas', $kelasId);
+        } elseif (!$semuaAkses) {
+            $query->whereIn('id_kelas', $kelasSaya->pluck('id_kelas'));
         }
+        $siswa = $query->get();
 
-        $kelasId   = $request->id_kelas ?? $kelasSaya->first()->id_kelas;
-        $semester  = $request->semester ?? '1';
-
-        $siswa = Siswa::where('id_kelas', $kelasId)->orderBy('nama_siswa')->get();
-
-        return view('guru.kegiatan.index', compact('kelasSaya', 'kelasId', 'semester', 'siswa'));
+        return view('guru.kegiatan.index', compact('kelasSaya', 'kelasId', 'semuaAkses', 'semester', 'siswa'));
     }
 
     public function show(Request $request, $id)
@@ -74,8 +85,10 @@ class KegiatanController extends Controller
                 );
             }
             DB::commit();
-            return redirect()->route('guru.kegiatan.index', ['semester' => $request->semester])
-                ->with('success', "Penilaian kegiatan {$siswa->nama_siswa} berhasil disimpan.");
+            return redirect()->route('guru.kegiatan.index', [
+                'id_kelas' => $siswa->id_kelas,
+                'semester' => $request->semester,
+            ])->with('success', "Penilaian kegiatan {$siswa->nama_siswa} berhasil disimpan.");
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal menyimpan penilaian kegiatan.');

@@ -18,13 +18,18 @@ class PresensiController extends Controller
      */
     public function index(Request $request)
     {
-        $kelasSaya = Kelas::where('id_user', Auth::id())->get();
+        $kelasDiampu = Kelas::where('id_user', Auth::id())->get();
+        $semuaAkses  = $kelasDiampu->isEmpty();
 
-        if ($kelasSaya->isEmpty()) {
-            return back()->with('error', 'Anda belum ditugaskan di kelas mana pun.');
-        }
+        $kelasSaya = $semuaAkses
+            ? Kelas::orderBy('nama_kelas')->get()
+            : $kelasDiampu;
 
-        $kelasId = $request->id_kelas ?? $kelasSaya->first()->id_kelas;
+        $defaultKelasId = $semuaAkses
+            ? 'semua'
+            : ($kelasSaya->first()?->id_kelas ?? 'semua');
+
+        $kelasId = $request->id_kelas ?? $defaultKelasId;
 
         $tanggal = $request->tanggal ?? date('Y-m-d');
 
@@ -33,9 +38,13 @@ class PresensiController extends Controller
         $tahunAjaran = $request->tahun_ajaran
             ?? date('Y') . '/' . (date('Y') + 1);
 
-        $siswa = Siswa::where('id_kelas', $kelasId)
-            ->orderBy('nama_siswa')
-            ->get();
+        $query = Siswa::with('kelas')->orderBy('nama_siswa');
+        if ($kelasId !== 'semua' && !empty($kelasId)) {
+            $query->where('id_kelas', $kelasId);
+        } elseif (!$semuaAkses) {
+            $query->whereIn('id_kelas', $kelasSaya->pluck('id_kelas'));
+        }
+        $siswa = $query->get();
 
         $presensiHariIni = Presensi::where('tanggal', $tanggal)
             ->where('semester', $semester)
@@ -47,6 +56,7 @@ class PresensiController extends Controller
         return view('guru.presensi.index', compact(
             'kelasSaya',
             'kelasId',
+            'semuaAkses',
             'tanggal',
             'semester',
             'tahunAjaran',
@@ -61,11 +71,11 @@ class PresensiController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'id_kelas' => 'required|exists:kelas,id_kelas',
-            'tanggal' => 'required|date',
-            'semester' => 'required',
-            'tahun_ajaran' => 'required',
-            'presensi' => 'required|array',
+            'id_kelas'          => 'nullable',
+            'tanggal'           => 'required|date',
+            'semester'          => 'required',
+            'tahun_ajaran'      => 'required',
+            'presensi'          => 'required|array',
             'presensi.*.status' => 'required|in:hadir,izin,sakit,tanpa_keterangan',
         ]);
 
@@ -76,19 +86,16 @@ class PresensiController extends Controller
             foreach ($request->presensi as $id_siswa => $data) {
 
                 Presensi::updateOrCreate(
-
                     [
-                        'id_siswa' => $id_siswa,
-                        'tanggal' => $request->tanggal,
-                        'semester' => $request->semester,
+                        'id_siswa'     => $id_siswa,
+                        'tanggal'      => $request->tanggal,
+                        'semester'     => $request->semester,
                         'tahun_ajaran' => $request->tahun_ajaran,
                     ],
-
                     [
-                        'status' => $data['status'],
+                        'status'     => $data['status'],
                         'keterangan' => $data['keterangan'] ?? null,
                     ]
-
                 );
 
                 $this->updatePresensiRaport(
@@ -101,9 +108,9 @@ class PresensiController extends Controller
             DB::commit();
 
             return redirect()->route('guru.presensi.index', [
-                'id_kelas' => $request->id_kelas,
-                'tanggal' => $request->tanggal,
-                'semester' => $request->semester,
+                'id_kelas'     => $request->id_kelas,
+                'tanggal'      => $request->tanggal,
+                'semester'     => $request->semester,
                 'tahun_ajaran' => $request->tahun_ajaran,
             ])->with('success', 'Data presensi berhasil disimpan.');
 
@@ -130,20 +137,17 @@ class PresensiController extends Controller
             ->get();
 
         PresensiRaport::updateOrCreate(
-
             [
-                'id_siswa' => $id_siswa,
-                'semester' => $semester,
+                'id_siswa'     => $id_siswa,
+                'semester'     => $semester,
                 'tahun_ajaran' => $tahunAjaran,
             ],
-
             [
-                'hadir' => $rekap->where('status', 'hadir')->count(),
-                'izin' => $rekap->where('status', 'izin')->count(),
-                'sakit' => $rekap->where('status', 'sakit')->count(),
+                'hadir'            => $rekap->where('status', 'hadir')->count(),
+                'izin'             => $rekap->where('status', 'izin')->count(),
+                'sakit'            => $rekap->where('status', 'sakit')->count(),
                 'tanpa_keterangan' => $rekap->where('status', 'tanpa_keterangan')->count(),
             ]
-
         );
     }
 }

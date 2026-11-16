@@ -13,17 +13,28 @@ class AntropometriController extends Controller
 {
     public function index(Request $request)
     {
-        $kelasSaya = Kelas::where('id_user', auth()->id())->get();
-        
-        if ($kelasSaya->isEmpty()) {
-            return back()->with('error', 'Anda belum memiliki kelas yang diampu.');
-        }
+        $kelasDiampu = Kelas::where('id_user', auth()->id())->get();
+        $semuaAkses  = $kelasDiampu->isEmpty();
 
-        $kelasId     = $request->id_kelas ?? $kelasSaya->first()->id_kelas;
+        $kelasSaya = $semuaAkses
+            ? Kelas::orderBy('nama_kelas')->get()
+            : $kelasDiampu;
+
+        $defaultKelasId = $semuaAkses
+            ? 'semua'
+            : ($kelasSaya->first()?->id_kelas ?? 'semua');
+
+        $kelasId     = $request->id_kelas ?? $defaultKelasId;
         $semester    = $request->semester ?? '1';
         $tahunAjaran = $request->tahun_ajaran ?? date('Y').'/'.((int)date('Y')+1);
 
-        $siswa = Siswa::where('id_kelas', $kelasId)->orderBy('nama_siswa')->get();
+        $query = Siswa::with('kelas')->orderBy('nama_siswa');
+        if ($kelasId !== 'semua' && !empty($kelasId)) {
+            $query->where('id_kelas', $kelasId);
+        } elseif (!$semuaAkses) {
+            $query->whereIn('id_kelas', $kelasSaya->pluck('id_kelas'));
+        }
+        $siswa = $query->get();
 
         $antropometriData = Antropometri::whereIn('id_siswa', $siswa->pluck('id_siswa'))
             ->where('semester', $semester)
@@ -32,14 +43,14 @@ class AntropometriController extends Controller
             ->keyBy('id_siswa');
 
         return view('guru.antropometri.index', compact(
-            'kelasSaya', 'kelasId', 'semester', 'tahunAjaran', 'siswa', 'antropometriData'
+            'kelasSaya', 'kelasId', 'semuaAkses', 'semester', 'tahunAjaran', 'siswa', 'antropometriData'
         ));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'id_kelas'     => 'required',
+            'id_kelas'     => 'nullable',
             'semester'     => 'required|in:1,2',
             'tahun_ajaran' => 'required|string',
             'antropometri' => 'required|array',
