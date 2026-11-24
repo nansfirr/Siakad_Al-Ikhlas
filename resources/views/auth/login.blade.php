@@ -43,13 +43,20 @@
         </div>
 
         <!-- Bagian Login -->
-        <div class="col-lg-5 d-flex justify-content-center align-items-center bg-light">
+        <div class="col-lg-5 d-flex justify-content-center align-items-center bg-light p-3">
 
-            <div class="card shadow border-0 rounded-4 p-4" style="width:420px">
+            <div class="card shadow border-0 rounded-4 p-4 w-100" style="max-width:420px">
 
                 <div class="text-center mb-4">
 
-                    <i class="bi bi-person-circle text-success" style="font-size:70px"></i>
+                    <div class="d-lg-none mb-2">
+                        <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill fw-semibold">
+                            <i class="bi bi-mortarboard-fill me-1"></i>
+                            {{ $pengaturan->nama_sekolah ?? 'SIAKAD TK AL-IKHLAS' }}
+                        </span>
+                    </div>
+
+                    <i class="bi bi-person-circle text-success" style="font-size:64px"></i>
 
                     <h3 class="fw-bold mt-2">
                         Login
