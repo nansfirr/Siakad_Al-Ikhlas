@@ -268,17 +268,21 @@ class RaportController extends Controller
     {
         $pesan = [];
 
-        if (
-            Penilaian::where('id_siswa', $id)
-                ->where('semester', $semester)
-                ->count() == 0
-        ) {
-            $pesan[] = "Penilaian belum diinput.";
-        }
-
-        $aspek = AspekPerkembangan::all();
+        $aspek = AspekPerkembangan::with('indikatorPenilaian')->orderBy('urutan')->get();
 
         foreach ($aspek as $item) {
+            $indIds = $item->indikatorPenilaian->pluck('id_indikator');
+            if ($indIds->isNotEmpty()) {
+                $terisiCount = Penilaian::where('id_siswa', $id)
+                    ->where('semester', $semester)
+                    ->whereIn('id_indikator', $indIds)
+                    ->count();
+
+                if ($terisiCount < $indIds->count()) {
+                    $pesan[] = "Nilai indikator (BB/MB/BSH/BSB) pada aspek '{$item->nama_aspek}' belum lengkap ({$terisiCount}/{$indIds->count()} indikator).";
+                }
+            }
+
             $desk = DeskripsiAspek::where('id_siswa', $id)
                 ->where('id_aspek', $item->id_aspek)
                 ->where('semester', $semester)

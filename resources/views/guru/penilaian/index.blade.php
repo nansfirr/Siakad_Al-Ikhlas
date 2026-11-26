@@ -44,32 +44,44 @@
                     <tr>
                         <th>No</th>
                         <th>Nama Siswa</th>
-                        <th>Status Penilaian</th>
+                        <th>Kelas</th>
+                        <th>Status Penilaian (6 Aspek)</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($siswa as $i => $s)
                     @php
-                        $jumlahNilai = $s->penilaian->where('semester', $semester)->count();
+                        $nilaiSemester = $s->penilaian->where('semester', $semester);
+                        $jumlahNilai   = $nilaiSemester->count();
+                        $jumlahAspek   = $nilaiSemester->pluck('indikator.id_aspek')->filter()->unique()->count();
+                        $targetAspek   = $totalAspek ?? 6;
+                        $targetInd     = $totalIndikator ?? 24;
                     @endphp
                     <tr>
                         <td>{{ $i + 1 }}</td>
-                        <td>{{ $s->nama_siswa }}</td>
+                        <td class="fw-semibold">{{ $s->nama_siswa }}</td>
+                        <td>{{ $s->kelas->nama_kelas ?? '-' }}</td>
                         <td>
-                            @if($jumlahNilai > 0)
+                            @if($jumlahNilai >= $targetInd && $jumlahAspek >= $targetAspek)
                                 <span class="badge bg-success">
-                                    <i class="bi bi-check-circle"></i> Sudah Dinilai ({{ $jumlahNilai }} indikator)
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Lengkap ({{ $jumlahAspek }}/{{ $targetAspek }} Aspek • {{ $jumlahNilai }}/{{ $targetInd }} Indikator)
+                                </span>
+                            @elseif($jumlahNilai > 0)
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-exclamation-circle me-1"></i>
+                                    Belum Lengkap ({{ $jumlahAspek }}/{{ $targetAspek }} Aspek • {{ $jumlahNilai }}/{{ $targetInd }} Indikator)
                                 </span>
                             @else
-                                <span class="badge bg-secondary">Belum Dinilai</span>
+                                <span class="badge bg-secondary">Belum Dinilai (0/{{ $targetAspek }} Aspek)</span>
                             @endif
                         </td>
                         <td>
                             <a href="{{ route('guru.penilaian.show', [$s->id_siswa, 'semester' => $semester]) }}"
-                                class="btn btn-success btn-sm">
+                                class="btn {{ $jumlahNilai > 0 && $jumlahNilai < $targetInd ? 'btn-warning' : 'btn-success' }} btn-sm">
                                 <i class="bi bi-pencil-square"></i>
-                                {{ $jumlahNilai > 0 ? 'Edit Penilaian' : 'Input Penilaian' }}
+                                {{ $jumlahNilai >= $targetInd ? 'Edit Penilaian' : ($jumlahNilai > 0 ? 'Lengkapi (' . ($targetAspek - $jumlahAspek) . ' Aspek Lagi)' : 'Input Penilaian') }}
                             </a>
                         </td>
                     </tr>

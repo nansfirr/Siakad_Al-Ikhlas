@@ -30,7 +30,7 @@ class PenilaianController extends Controller
         $kelasId  = $request->id_kelas ?? $defaultKelasId;
         $semester = $request->semester ?? '1';
 
-        $query = Siswa::with(['kelas', 'penilaian'])->orderBy('nama_siswa');
+        $query = Siswa::with(['kelas', 'penilaian.indikator'])->orderBy('nama_siswa');
         if ($kelasId !== 'semua' && !empty($kelasId)) {
             $query->where('id_kelas', $kelasId);
         } elseif (!$semuaAkses) {
@@ -38,12 +38,17 @@ class PenilaianController extends Controller
         }
         $siswa = $query->get();
 
+        $totalAspek     = AspekPerkembangan::count();
+        $totalIndikator = \App\Models\IndikatorPenilaian::count();
+
         return view('guru.penilaian.index', compact(
             'kelasSaya',
             'kelasId',
             'semuaAkses',
             'semester',
-            'siswa'
+            'siswa',
+            'totalAspek',
+            'totalIndikator'
         ));
     }
 
